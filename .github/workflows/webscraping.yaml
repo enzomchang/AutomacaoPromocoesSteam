@@ -1,0 +1,31 @@
+### Aqui você deve mudar de acordo com a suas secrets ###
+
+name: Run SteamPromocoes
+
+on:
+  schedule:
+    - cron: '0 12 * * 1' # Executar toda segunda-feira ao meio-dia (UTC) Pode ser alterado pelo usuário
+
+jobs:
+  run-steampromocoes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check conteudo do repositorio
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11.3 # Substitua pela versão do Python que você usa
+
+      - name: Instalar os pacotes do requirements.txt
+        run: python -m pip install -r requirements.txt
+
+      - name: Run SteamPromocoes script
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }} # Mudar de acordo com a sua secret
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }} # Mudar de acordo com a sua secret
+          EMAIL_TO: ${{ secrets.EMAIL_TO }} # Mudar de acordo com a sua secret
+          OUTPUT_PATH: ${{ secrets.OUTPUT_PATH }} # Mudar de acordo com a sua secret
+        run: python steampromocoes.py
