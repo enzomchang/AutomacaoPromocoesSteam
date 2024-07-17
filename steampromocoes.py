@@ -1,23 +1,25 @@
-""" AUTOMAÇÃO PARA PEGAR AS PRINCIPAIS PROMOÇÕES DA STEAM NA SEMANA E ENVIAR EM FORMA DE PLANILHA PARA O E-MAIL AUTOMATIZADO."""
+####################################################################################################################################
+##### AUTOMAÇÃO PARA PEGAR AS PRINCIPAIS PROMOÇÕES DA STEAM NA SEMANA E ENVIAR EM FORMA DE PLANILHA PARA O E-MAIL AUTOMATIZADO #####
+####################################################################################################################################
 
-""" Código agendado para executar automaticamente toda segunda feira 12:00 pelo Github Actions """
+""" Código agendado para executar automaticamente toda segunda feira 12:00 pelo *Github Actions* """
 
 ### SECRETS QUE PRECISARÃO SER DEFINIDAS PELO USUÁRIO ###
 """
 EMAIL_USER=seu_email@outlook.com
 EMAIL_TO=destinatario@example.com
-OUTPUT_PATH=/promocoes_steam.xlsx
+OUTPUT_PATH=outputs/promocoes_steam.xlsx
 SENDGRID_API_KEY=SG.seu_sendgrid_api_key
 """
 
 """
 Meu objetivo é pegar as seguintes informações da Steam:
-Nome do Jogo
-Preço Anterior do Jogo
-Preço novo do Jogo
-Porcentagem de Desconto
-Data de Lançamento 
-Url do Jogo
+* Nome do Jogo
+* Preço Anterior do Jogo
+* Preço novo do Jogo
+* Porcentagem de Desconto
+* Data de Lançamento 
+* Url do Jogo
 """
 
 """
@@ -33,18 +35,6 @@ Url do Jogo
 
 """
 
-"""
-
-### Mudanças necessárias para cada usuário: ( Estou sinalizando no código ) ###
-
-- Mudar de acordo com o e-mail que você quer que receba as promoções
-
-- Mudar o caminho do dataframe que será salvo para enviar por anexo
-
-- Agendar a tarefa de acordo com o que você quer que seja realizado o webscraping
-
-"""
-
 ##############################
 ### Instalações Essenciais ###
 ##############################
@@ -55,6 +45,7 @@ Url do Jogo
 # pip install scrapy
 # pip install schedule
 # pip install sendgrid
+# pip install openpyxl
 
 ##############################
 ### Bibliotecas Essenciais ###
@@ -73,10 +64,21 @@ from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileT
 import base64
 import openpyxl
 
-""" Se for testar localmente """
-#from dotenv import load_dotenv # Apenas se for usar localmente com um arquivo .env
+""" DESCOMENTAR SE FOR TESTAR LOCALMENTE COM UM ARQUIVO .env"""
+#from dotenv import load_dotenv
 # Carregar variáveis de ambiente do arquivo .env
-#load_dotenv()  # Apenas se for testar localmente
+#load_dotenv()
+
+# Verificar se as variáveis estão carregadas
+EMAIL_USER = os.getenv('EMAIL_USER')
+EMAIL_TO = os.getenv('EMAIL_TO')
+OUTPUT_PATH = os.getenv('OUTPUT_PATH')
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
+
+# Garantir que o diretório de saída exista
+output_dir = os.path.dirname(OUTPUT_PATH)
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 ##############################
 ###### Funções Projeto #######
@@ -198,7 +200,7 @@ def enviar_email():
         html_content=content
     )
 
-    with open(output_path, 'rb') as f:
+    with open(OUTPUT_PATH, 'rb') as f:
         file_data = f.read()
         encoded_file = base64.b64encode(file_data).decode()
 
@@ -228,8 +230,16 @@ df = pd.DataFrame(dic_produtos)
 # Obter o caminho de saída da variável de ambiente
 output_path = os.getenv('OUTPUT_PATH')
 
+# Garantir que o diretório de saída exista
+output_dir = os.path.dirname(output_path)
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+# Verificar se o caminho de saída está correto
+print(f"Salvando o arquivo em: {output_path}")
+
 # Salvar o DataFrame em um arquivo Excel
-df.to_excel(output_path, index=False)
+df.to_excel(output_path, index=False, engine='openpyxl')
 
 # Chamar Função enviar e-mail
 enviar_email()
