@@ -55,3 +55,5 @@ webdriver-manager==4.0.1
 websocket-client==1.8.0
 wsproto==1.2.0
 zope.interface==6.4.post2
+sendgrid==6.9.7
+openpyxl==3.1.5

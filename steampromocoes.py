@@ -2,6 +2,14 @@
 
 """ Código agendado para executar automaticamente toda segunda feira 12:00 pelo Github Actions """
 
+### SECRETS QUE PRECISARÃO SER DEFINIDAS PELO USUÁRIO ###
+"""
+EMAIL_USER=seu_email@outlook.com
+EMAIL_TO=destinatario@example.com
+OUTPUT_PATH=/promocoes_steam.xlsx
+SENDGRID_API_KEY=SG.seu_sendgrid_api_key
+"""
+
 """
 Meu objetivo é pegar as seguintes informações da Steam:
 Nome do Jogo
@@ -46,6 +54,7 @@ Url do Jogo
 # pip install webdriver-manager
 # pip install scrapy
 # pip install schedule
+# pip install sendgrid
 
 ##############################
 ### Bibliotecas Essenciais ###
@@ -58,12 +67,16 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 import time
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email.mime.text import MIMEText
-from email import encoders
 import os
+import sendgrid
+from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
+import base64
+import openpyxl
+
+""" Se for testar localmente """
+#from dotenv import load_dotenv # Apenas se for usar localmente com um arquivo .env
+# Carregar variáveis de ambiente do arquivo .env
+#load_dotenv()  # Apenas se for testar localmente
 
 ##############################
 ###### Funções Projeto #######
@@ -166,39 +179,37 @@ def criar_tabela_html(df):
     tabela_html += "</table>"
     return tabela_html
 
-# Enviar o arquivo por email usando SMTP
+# Enviar o arquivo por email usando SendGrid
 def enviar_email():
     tabela_html = criar_tabela_html(df)
-    fromaddr = os.getenv('EMAIL_USER')
-    toaddr = os.getenv('EMAIL_TO') # Mudar de acordo com o e-mail que você quer que receba as promoções
-    msg = MIMEMultipart()
-    msg['From'] = fromaddr
-    msg['To'] = toaddr
-    msg['Subject'] = "Promoções Semanais da Steam"
-
-    body = f"""
+    sg = sendgrid.SendGridAPIClient(api_key=os.getenv('SENDGRID_API_KEY'))
+    from_email = os.getenv('EMAIL_USER')
+    to_email = os.getenv('EMAIL_TO')
+    subject = "Promoções Semanais da Steam"
+    content = f"""
     <p>Olá,</p>
     <p>Segue o relatório atualizado das promoções semanais da Steam na planilha em anexo e na tabela abaixo:</p>
     {tabela_html}
     """
-    msg.attach(MIMEText(body, 'html'))
+    message = Mail(
+        from_email=from_email,
+        to_emails=to_email,
+        subject=subject,
+        html_content=content
+    )
 
-    filename = output_path
-    attachment = open(filename, "rb")
+    with open(output_path, 'rb') as f:
+        file_data = f.read()
+        encoded_file = base64.b64encode(file_data).decode()
 
-    part = MIMEBase('application', 'octet-stream')
-    part.set_payload(attachment.read())
-    encoders.encode_base64(part)
-    part.add_header('Content-Disposition', f'attachment; filename= {filename.split("/")[-1]}')
-
-    msg.attach(part)
-
-    server = smtplib.SMTP('smtp.gmail.com', 587)
-    server.starttls()
-    server.login(fromaddr, os.getenv('EMAIL_PASS'))
-    text = msg.as_string()
-    server.sendmail(fromaddr, toaddr, text)
-    server.quit()
+    attachedFile = Attachment(
+        FileContent(encoded_file),
+        FileName('promocoes_steam.xlsx'),
+        FileType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+        Disposition('attachment')
+    )
+    message.attachment = attachedFile
+    sg.send(message)
     print("Email enviado!")
 
 ##############################
